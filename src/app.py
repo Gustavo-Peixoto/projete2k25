@@ -1,5 +1,6 @@
 import processamento
 import adicionarUser
+import criacaopdf
 import cv2
 import numpy as np
 import base64
@@ -41,13 +42,8 @@ def receber_imagem():
 @server.route("/relatorios", methods=['POST'])
 def criarRelatorio():
     dados = request.json
-    nome = dados["nome_arquivo"]
-    caminho = os.path.join("./upload", nome)
-    pdf_bytes = base64.b64decode(dados["relatorio"])
-
-    with open(caminho, 'wb') as f:
-        f.write(pdf_bytes)
-    
+    resultado = criacaopdf.salvarPdf(dados["usuario_id"], dados["nome_arquivo"], dados["relatorio"])
+    return jsonify(resultado), resultado["codigo"]
 
 
 @server.route('/usuarios', methods=['POST'])
