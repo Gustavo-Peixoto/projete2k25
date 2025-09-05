@@ -12,7 +12,7 @@ os.makedirs("uploads", exist_ok=True)
 db = mysql.connector.connect(
     host = "localhost",
     user = "root",
-    password = "gu010104",
+    password = "Crime#18",
     database =  "projete2k25"
 )
 
@@ -38,7 +38,7 @@ def receber_imagem():
 
     return jsonify({"mensagem": "sucesso", "imagem": imagem_b64}), 200
 
-@server.route("/relatorios", mehtods=['POST'])
+@server.route("/relatorios", methods=['POST'])
 def criarRelatorio():
     dados = request.json
     nome = dados["nome_arquivo"]

@@ -2,8 +2,8 @@ import requests
 
 dados = {
     "nome": "Gustavo",
-    "email": "teste@email.com",
-    "senha": "123456"
+    "email": "teste2@email.com",
+    "senha": "78910"
 }
 
 url = "http://localhost:5000/usuarios"
