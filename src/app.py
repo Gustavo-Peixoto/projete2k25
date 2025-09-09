@@ -1,6 +1,7 @@
 import processamento
 import adicionarUser
-import criacaopdf
+import verificarUser
+import addcliente
 import cv2
 import numpy as np
 import base64
@@ -12,8 +13,8 @@ os.makedirs("uploads", exist_ok=True)
 
 db = mysql.connector.connect(
     host = "localhost",
-    user = "root",
-    password = "Crime#18",
+    user = "gustv",
+    password = "Climb#18",
     database =  "projete2k25"
 )
 
@@ -39,18 +40,37 @@ def receber_imagem():
 
     return jsonify({"mensagem": "sucesso", "imagem": imagem_b64}), 200
 
-@server.route("/relatorios", methods=['POST'])
+@server.route("/clientes", methods=['POST'])
 def criarRelatorio():
+    try:
+        dados = request.json
+        result = addcliente.criar(
+            dados['usuario_id'],
+            dados['nome'],
+            dados['nome_animal'],
+            dados['telefone'],
+            dados['email'],
+            dados['endereco'],
+            db,
+            cursor
+            )
+        return jsonify(result), result['codigo']
+    except Exception as f:
+        return jsonify({'mensagem' : f"erro: {f}"}), 400
+
+@server.route('/verifyuser', methods=['POST'])
+def verficar_user():
     dados = request.json
-    resultado = criacaopdf.salvarPdf(dados["usuario_id"], dados["nome_arquivo"], dados["relatorio"])
-    return jsonify(resultado), resultado["codigo"]
+    email = dados["email"]
+    senha = dados["senha"]
+    resultado = verificarUser.verificar(senha, email, db, cursor)
+    return jsonify(resultado), resultado['codigo']
 
-
-@server.route('/usuarios', methods=['POST'])
+@server.route('/adduser', methods=['POST'])
 def adicionar_user():
     dados = request.get_json()
-    resposta = adicionarUser.add(dados["nome"], dados["email"], dados["senha"])
-    return jsonify({"mensagem": "sucesso", "estado": resposta}), 200
+    resposta = adicionarUser.add(dados["nome"], dados["email"], dados["senha"], db, cursor)
+    return jsonify(resposta), resposta['codigo']
 
 if __name__ == '__main__':
     server.run(host='0.0.0.0', port=5000, debug=True)
