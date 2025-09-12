@@ -8,6 +8,7 @@ import base64
 from flask import Flask, request, jsonify
 import mysql.connector
 import os
+import json
 
 os.makedirs("uploads", exist_ok=True)
 
@@ -18,7 +19,7 @@ db = mysql.connector.connect(
     database =  "projete2k25"
 )
 
-cursor = db.cursor()
+cursor = db.cursor(dictionary=True)
 
 def imagem_para_base64(imagem_np):
     _, buffer = cv2.imencode('.jpg', imagem_np)
@@ -39,6 +40,18 @@ def receber_imagem():
     imagem_b64 = imagem_para_base64(resultado)
 
     return jsonify({"mensagem": "sucesso", "imagem": imagem_b64}), 200
+
+@server.route("/verifyrelatorios", methods=['POST'])
+def mostrarClientes():
+    try:
+        dados = request.json
+        user = dados["usuario_id"]
+        cursor.execute("SELECT * FROM clientes WHERE usuario_id = %s",(user,))
+        lista = cursor.fetchall()
+        return jsonify({'mensagem' : "Sucesso.",'clientes' : lista}), 200
+    except Exception as a:
+        return jsonify({'mensagem' : f"Erro: {a}", 'clientes' : None}), 400
+
 
 @server.route("/clientes", methods=['POST'])
 def criarRelatorio():
@@ -71,6 +84,20 @@ def adicionar_user():
     dados = request.get_json()
     resposta = adicionarUser.add(dados["nome"], dados["email"], dados["senha"], db, cursor)
     return jsonify(resposta), resposta['codigo']
+
+@server.route('/addexame', methods=['POST'])
+def adicionar_exame():
+    try:
+        dados = request.json
+        clienteId = dados["cliente_id"]
+        alimentos = json.dumps(dados["alimentos"])
+        peso = dados["peso"]
+        sexo = dados["sexo"]
+        cursor.execute("INSERT INTO exames (alimentos,peso,sexo,cliente_id) VALUES (%s,%s,%s,%s)",(alimentos,peso,sexo,clienteId))
+        db.commit()
+        return jsonify({'mensagem' : 'Criado com sucesso.'}), 200
+    except Exception as a:
+        return jsonify({'mensagem' : f'erro:{a}'}), 400
 
 if __name__ == '__main__':
     server.run(host='0.0.0.0', port=5000, debug=True)

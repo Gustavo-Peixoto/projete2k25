@@ -1,14 +1,16 @@
-import requests
+import mysql.connector
 
-dados = {
-    "nome": "Gustavo",
-    "email": "teste2@email.com",
-    "senha": "78910"
-}
+db = mysql.connector.connect(
+    host = "localhost",
+    user = "gustv",
+    password = "Climb#18",
+    database =  "projete2k25"
+)
 
-url = "http://localhost:5000/usuarios"
+cursor = db.cursor(dictionary=True)
 
-resposta = requests.post(url, json=dados)
+cursor.execute("SELECT alimentos FROM exames WHERE cliente_id = 1")
+coisas = cursor.fetchall()
 
-print(resposta.status_code)
-print(resposta.json())
+for i in coisas:
+    print(i)
