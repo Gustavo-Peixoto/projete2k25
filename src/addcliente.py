@@ -4,7 +4,7 @@ def criar(usuario_id,nome,nome_animal,telefone,email,endereco,db,cursor):
     result = cursor.fetchone()
     if result is not None:
         return{
-            'codigo' : 100,
+            'codigo' : 500,
             'mensagem' : 'Cliente ja existe'
         }
     else:

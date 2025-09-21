@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import base64
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import mysql.connector
 import os
 import json
@@ -27,9 +28,10 @@ def imagem_para_base64(imagem_np):
     return jpg_as_text
 
 server = Flask(__name__)
+CORS(server)
 
-@server.route('/image_proces', methods=['POST'])
-def receber_imagem():
+@server.route('/imageProces', methods=['POST'])
+def processarImagem():
     if 'img' not in request.files:
         return jsonify({'erro': 'Nenhuma imagem recebida'}), 400
 
@@ -41,7 +43,7 @@ def receber_imagem():
 
     return jsonify({"mensagem": "sucesso", "imagem": imagem_b64}), 200
 
-@server.route("/verifyrelatorios", methods=['POST'])
+@server.route("/verifyclientes", methods=['POST'])
 def mostrarClientes():
     try:
         dados = request.json
@@ -54,13 +56,13 @@ def mostrarClientes():
 
 
 @server.route("/clientes", methods=['POST'])
-def criarRelatorio():
+def criarCliente():
     try:
         dados = request.json
         result = addcliente.criar(
-            dados['usuario_id'],
+            dados['usuarioid'],
             dados['nome'],
-            dados['nome_animal'],
+            dados['nomeAnimal'],
             dados['telefone'],
             dados['email'],
             dados['endereco'],
@@ -72,7 +74,7 @@ def criarRelatorio():
         return jsonify({'mensagem' : f"erro: {f}"}), 400
 
 @server.route('/verifyuser', methods=['POST'])
-def verficar_user():
+def verficarUser():
     dados = request.json
     email = dados["email"]
     senha = dados["senha"]
@@ -81,7 +83,7 @@ def verficar_user():
 
 @server.route('/adduser', methods=['POST'])
 def adicionar_user():
-    dados = request.get_json()
+    dados = request.json
     resposta = adicionarUser.add(dados["nome"], dados["email"], dados["senha"], db, cursor)
     return jsonify(resposta), resposta['codigo']
 
