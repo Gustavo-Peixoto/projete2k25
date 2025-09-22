@@ -20,7 +20,7 @@ dados = {
         "maçã": "positivo",
         "banana": "negativo"
   },
-  "peso": 72,
+  "peso": 75,
   "sexo": "M"
 }
 

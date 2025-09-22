@@ -8,7 +8,7 @@ def add(nome, email, senha, db, cursor):
 
     result = cursor.fetchone()
 
-    if(result):
+    if result:
         return {
             'codigo' : 400,
             'mensagem' : 'email ja existente'

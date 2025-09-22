@@ -1,6 +1,6 @@
 import processamento
 import adicionarUser
-import verificarUser
+import hashlib
 import addcliente
 import cv2
 import numpy as np
@@ -15,7 +15,7 @@ os.makedirs("uploads", exist_ok=True)
 
 db = mysql.connector.connect(
     host = "localhost",
-    user = "gustv",
+    user = "projete",
     password = "Climb#18",
     database =  "projete2k25"
 )
@@ -47,10 +47,18 @@ def processarImagem():
 def mostrarClientes():
     try:
         dados = request.json
-        user = dados["usuario_id"]
+        user = dados.get("usuarioId")
+        if user is None:
+            return jsonify({'mensagem' : 'É nescessario o id do usuario', 'clientes' : None}), 400
+        
         cursor.execute("SELECT * FROM clientes WHERE usuario_id = %s",(user,))
         lista = cursor.fetchall()
-        return jsonify({'mensagem' : "Sucesso.",'clientes' : lista}), 200
+
+        if lista:
+            return jsonify({'mensagem' : "Sucesso.",'clientes' : lista}), 200
+        else:
+            return jsonify({'mensagem' : "Nenhum cliente",'clientes' : []}), 200
+        
     except Exception as a:
         return jsonify({'mensagem' : f"Erro: {a}", 'clientes' : None}), 400
 
@@ -75,11 +83,35 @@ def criarCliente():
 
 @server.route('/verifyuser', methods=['POST'])
 def verficarUser():
-    dados = request.json
-    email = dados["email"]
-    senha = dados["senha"]
-    resultado = verificarUser.verificar(senha, email, db, cursor)
-    return jsonify(resultado), resultado['codigo']
+    try:
+        dados = request.json
+        email = dados.get("email")
+        senha = dados.get("senha")
+
+        if not email or not senha:
+            return jsonify({'codigo': 400, 'mensagem': 'Email e senha são obrigatórios.', 'usuarioId': None}), 400
+
+        hash = hashlib.sha256(senha.encode())
+        senhahash = hash.hexdigest()
+
+        cursor.execute("SELECT id FROM login WHERE email = %s AND senha = %s", (email,senhahash,))
+        usuario = cursor.fetchone()
+
+        if usuario:
+            return jsonify({
+                'mensagem' : 'login feito.',
+                'usuarioId' : usuario
+            }), 200
+        
+        else:
+            return jsonify({
+                'mensagem' : 'Senha ou email incorreto.',
+                'usuarioId' : None
+            }), 400
+        
+    except Exception as e:
+        print("Erro em /verifyuser:", e) 
+        return jsonify({'codigo': 500, 'mensagem': f'Erro interno: {e}', 'usuarioId': None}), 500
 
 @server.route('/adduser', methods=['POST'])
 def adicionar_user():
@@ -88,7 +120,7 @@ def adicionar_user():
     return jsonify(resposta), resposta['codigo']
 
 @server.route('/addexame', methods=['POST'])
-def adicionar_exame():
+def adicionarExame():
     try:
         dados = request.json
         clienteId = dados["cliente_id"]
@@ -100,6 +132,27 @@ def adicionar_exame():
         return jsonify({'mensagem' : 'Criado com sucesso.'}), 200
     except Exception as a:
         return jsonify({'mensagem' : f'erro:{a}'}), 400
+    
+@server.route('/verifyexame', methods=['POST'])
+def listarExames():
+    try:
+        dados = request.json
+        cliente_id = dados.get("clienteId")
+
+        if cliente_id is None:
+            return jsonify({'Mensagem' : "É nescessario o id do cliente", 'exames' : None}), 400
+        
+        cursor.execute("SELECT * FROM exames WHERE cliente_id = %s", (cliente_id,))
+        lista = cursor.fetchall()
+        
+        if lista:
+            return jsonify({'mensagem' : 'Sucesso', 'exames' : lista}), 200
+        else:
+            return jsonify({'mensagem' : "Nao existe exames.", 'exames' : []}), 200
+        
+    except Exception as a:
+        return jsonify({'mensagem' : f"Erro: {a}", 'exames' : None}), 400
+        
 
 if __name__ == '__main__':
     server.run(host='0.0.0.0', port=5000, debug=True)
