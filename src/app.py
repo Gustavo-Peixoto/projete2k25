@@ -15,7 +15,7 @@ os.makedirs("uploads", exist_ok=True)
 
 db = mysql.connector.connect(
     host = "localhost",
-    user = "projete",
+    user = "gustv",
     password = "Climb#18",
     database =  "projete2k25"
 )
@@ -63,14 +63,14 @@ def mostrarClientes():
         return jsonify({'mensagem' : f"Erro: {a}", 'clientes' : None}), 400
 
 
-@server.route("/clientes", methods=['POST'])
+@server.route("/addclientes", methods=['POST'])
 def criarCliente():
     try:
         dados = request.json
         result = addcliente.criar(
             dados['usuarioid'],
             dados['nome'],
-            dados['nomeAnimal'],
+            dados['nomeanimal'],
             dados['telefone'],
             dados['email'],
             dados['endereco'],
@@ -85,22 +85,22 @@ def criarCliente():
 def verficarUser():
     try:
         dados = request.json
-        email = dados.get("email")
+        nome = dados.get("email")
         senha = dados.get("senha")
 
-        if not email or not senha:
+        if not nome or not senha:
             return jsonify({'codigo': 400, 'mensagem': 'Email e senha são obrigatórios.', 'usuarioId': None}), 400
 
         hash = hashlib.sha256(senha.encode())
         senhahash = hash.hexdigest()
 
-        cursor.execute("SELECT id FROM login WHERE email = %s AND senha = %s", (email,senhahash,))
+        cursor.execute("SELECT id FROM login WHERE nome = %s AND senha = %s", (nome,senhahash,))
         usuario = cursor.fetchone()
 
         if usuario:
             return jsonify({
                 'mensagem' : 'login feito.',
-                'usuarioId' : usuario
+                'id': usuario[0] if isinstance(usuario, tuple) else usuario['id']
             }), 200
         
         else:
