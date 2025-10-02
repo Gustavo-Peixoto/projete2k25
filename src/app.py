@@ -22,26 +22,15 @@ db = mysql.connector.connect(
 
 cursor = db.cursor(dictionary=True)
 
-def imagem_para_base64(imagem_np):
-    _, buffer = cv2.imencode('.jpg', imagem_np)
-    jpg_as_text = base64.b64encode(buffer).decode('utf-8')
-    return jpg_as_text
-
 server = Flask(__name__)
 CORS(server)
 
 @server.route('/imageProces', methods=['POST'])
 def processarImagem():
-    if 'img' not in request.files:
-        return jsonify({'erro': 'Nenhuma imagem recebida'}), 400
-
-    file = request.files['img']
-    imagem_bytes = file.read()
-
-    resultado = processamento.processar_imagem(imagem_bytes)
-    imagem_b64 = imagem_para_base64(resultado)
-
-    return jsonify({"mensagem": "sucesso", "imagem": imagem_b64}), 200
+    dados = request.json
+    imagem_base64 =  dados['img']
+    lista_procecamentos = processamento.procecar(imagem_base64)
+    return jsonify(lista_procecamentos), 200
 
 @server.route("/verifyclientes", methods=['POST'])
 def mostrarClientes():

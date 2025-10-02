@@ -1,20 +1,28 @@
+from ultralytics import YOLO
 import cv2
 import numpy as np
+import base64
+import matplotlib.pyplot as plt
 
-def processar_imagem(img_bytes):
-    img_array = np.frombuffer(img_bytes, dtype=np.uint8)
-    imagem = cv2.imdecode(img_array, cv2.IMREAD_COLOR)  # Corrigido: BGR
 
-    imagem = cv2.resize(imagem, (400, 400))
+def procecar(imagem_base64):
+    img_bytes = base64.b64decode(imagem_base64)
+    np_arr = np.frombuffer(img_bytes,dtype=np.uint8)
+
+    # Converte para OpenCV
+    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+    model = YOLO("Gray_Blur.pt")
+    # Processamento exemplo: escala de cinza
+    imagem = cv2.resize(img, (800, 800))
 
     # Remove tons de azul com HSV
     hsv = cv2.cvtColor(imagem, cv2.COLOR_BGR2HSV)
-    lower_blue = np.array([115, 30, 50])
-    upper_blue = np.array([125, 160, 255])
+    lower_blue = (90, 50, 20)
+    upper_blue= (130, 255, 255)
     mask_blue = cv2.inRange(hsv, lower_blue, upper_blue)
 
     # Limpeza da máscara
-    kernel_small = np.ones((3, 3), np.uint8)
+    kernel_small = np.ones((5, 5), np.uint8)
     mask_clean = cv2.morphologyEx(mask_blue, cv2.MORPH_OPEN, kernel_small)
 
     # Dilatação para garantir remoção completa
@@ -28,39 +36,69 @@ def processar_imagem(img_bytes):
     gray = cv2.cvtColor(imagem_sem_azul, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (3, 3), 0)
 
-    # Detecção de bordas
-    canny = cv2.Canny(blur, threshold1=100, threshold2=200)
+    #Com IA
+    img_rgb = cv2.cvtColor(blur, cv2.COLOR_BGR2RGB)
+    results = model(img_rgb, iou=0.45)
 
-    # Fechamento morfológico para unir bordas
-    kernel_close = np.ones((3, 3), np.uint8)
-    dilated = cv2.dilate(canny, kernel_close, iterations=1)
-    closed = cv2.morphologyEx(dilated, cv2.MORPH_CLOSE, kernel_close)
+ # valor bem alto para começar
+    box_ref = None
+    boxes_all = []
 
-    # Detecção de contornos na imagem já dilatada
-    contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # Cria imagem apenas com círculos válidos desenhados
-    resultado_circulos = imagem_sem_azul.copy()
-
-    for cnt in contours:
-        area = cv2.contourArea(cnt)
-        perimeter = cv2.arcLength(cnt, True)
-
-        if perimeter == 0:
-            continue
-
-        circularity = 4 * np.pi * (area / (perimeter * perimeter))
-
-        # Filtra apenas contornos quase circulares e com área adequada
-        if 0.5 < circularity <= 2 and area > 100:
-            (x, y), radius = cv2.minEnclosingCircle(cnt)
-            if 5 < radius < 25:
-                center = (int(x), int(y))
-                radius = int(radius)
-                diameter = 2 * radius
-                cv2.circle(resultado_circulos, center, radius, (0, 255, 0), 2)
-                cv2.putText(resultado_circulos, f"D={diameter}", (center[0] - 40, center[1] - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
-                
+    for r in results:
+        boxes = r.boxes.xyxy.cpu().numpy()   # coordenadas [x1, y1, x2, y2]
+        confs = r.boxes.conf.cpu().numpy()   # confiança
+        classes = r.boxes.cls.cpu().numpy()
+          # classes preditasaa
+        min_y1 = float('inf')
+        tamanho = 0
+        for box in boxes:
+            x1, y1, x2, y2 = map(int, box)
         
-    return resultado_circulos
+            if y1 < min_y1:
+                min_y1 = y1
+                tamanho = y2 - y1
+                box_ref = (x1, y1, x2, y2)
+        num = 1 
+        for box, conf, cls in zip(boxes, confs, classes):
+            x1, y1, x2, y2 = map(int, box)
+            w = y2 - y1
+            verificador = 0
+            if(tamanho>w):
+                verificador = 1
+                # Desenha retângulo
+                cv2.rectangle(img_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+                # Escreve  classe + confiança
+                label = f"{'Correto'} {conf:.2f} {num}"
+                cv2.putText(img_rgb, label, (x1, y1 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            else:
+                # Desenha retângulo
+                cv2.rectangle(img_rgb, (x1, y1), (x2, y2), (0, 0, 255), 2)
+
+                # Escreve classe + confiança
+                label = f"{'Incorreto'} {conf:.2f} {num}"
+                cv2.putText(img_rgb, label, (x1, y1 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            boxes_all.append({
+                "x1": x1,
+                "y1": y1,
+                "x2": x2,
+                "y2": y2,
+                'veri':verificador
+            })
+            num += 1
+    
+    if box_ref:
+        x1, y1, x2, y2 = box_ref
+        cv2.rectangle(img_rgb, (x1, y1), (x2, y2), (255, 255, 0), 2)
+        cv2.putText(img_rgb, "Referencia", (x1, y1 - 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+
+    _, buffer = cv2.imencode('.png', img_rgb)  # Converte para PNG
+    img_bytes = buffer.tobytes()   
+    img_return = base64.b64encode(img_bytes).decode('utf-8')
+    return {
+        'img' : img_return,
+        'boxes' : boxes_all,
+    }
