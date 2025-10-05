@@ -13,7 +13,7 @@ def procecar(imagem_base64):
     img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
     model = YOLO("Gray_Blur.pt")
     # Processamento exemplo: escala de cinza
-    imagem = cv2.resize(img, (800, 800))
+    imagem = cv2.resize(img, (640, 640))
 
     # Remove tons de azul com HSV
     hsv = cv2.cvtColor(imagem, cv2.COLOR_BGR2HSV)
