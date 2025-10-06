@@ -13,14 +13,13 @@ import json
 
 os.makedirs("uploads", exist_ok=True)
 
-db = mysql.connector.connect(
-    host = "localhost",
-    user = "gustv",
-    password = "Climb#18",
-    database =  "projete2k25"
-)
-
-cursor = db.cursor(dictionary=True)
+def get_db():
+    return mysql.connector.connect(
+        host = "localhost",
+        user = "gustv",
+        password = "Climb#18",
+        database =  "projete2k25"
+    )
 
 server = Flask(__name__)
 CORS(server)
@@ -40,6 +39,8 @@ def mostrarClientes():
         if user is None:
             return jsonify({'mensagem' : 'É nescessario o id do usuario', 'clientes' : None}), 400
         
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM clientes WHERE usuario_id = %s",(user,))
         lista = cursor.fetchall()
 
@@ -50,12 +51,17 @@ def mostrarClientes():
         
     except Exception as a:
         return jsonify({'mensagem' : f"Erro: {a}", 'clientes' : None}), 400
-
+    
+    finally:
+        cursor.close()
+        db.close()
 
 @server.route("/addclientes", methods=['POST'])
 def criarCliente():
     try:
         dados = request.json
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
         result = addcliente.criar(
             dados['usuarioid'],
             dados['nome'],
@@ -67,8 +73,13 @@ def criarCliente():
             cursor
             )
         return jsonify(result), result['codigo']
+    
     except Exception as f:
         return jsonify({'mensagem' : f"erro: {f}"}), 400
+    
+    finally:
+        cursor.close()
+        db.close()
 
 @server.route('/verifyuser', methods=['POST'])
 def verficarUser():
@@ -82,6 +93,9 @@ def verficarUser():
 
         hash = hashlib.sha256(senha.encode())
         senhahash = hash.hexdigest()
+
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
 
         cursor.execute("SELECT id FROM login WHERE nome = %s AND senha = %s", (nome,senhahash,))
         usuario = cursor.fetchone()
@@ -101,12 +115,22 @@ def verficarUser():
     except Exception as e:
         print("Erro em /verifyuser:", e) 
         return jsonify({'codigo': 500, 'mensagem': f'Erro interno: {e}', 'usuarioId': None}), 500
+    
+    finally:
+        cursor.close()
+        db.close()
 
 @server.route('/adduser', methods=['POST'])
 def adicionar_user():
-    dados = request.json
-    resposta = adicionarUser.add(dados["nome"], dados["email"], dados["senha"], db, cursor)
-    return jsonify(resposta), resposta['codigo']
+    try:
+        dados = request.json
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        resposta = adicionarUser.add(dados["nome"], dados["email"], dados["senha"], db, cursor)
+        return jsonify(resposta), resposta['codigo']
+    finally:
+        cursor.close()
+        db.close()
 
 @server.route('/addexame', methods=['POST'])
 def adicionarExame():
@@ -116,11 +140,17 @@ def adicionarExame():
         alimentos = json.dumps(dados["alimentos"])
         peso = dados["peso"]
         sexo = dados["sexo"]
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
         cursor.execute("INSERT INTO exames (alimentos,peso,sexo,cliente_id) VALUES (%s,%s,%s,%s)",(alimentos,peso,sexo,clienteId))
         db.commit()
         return jsonify({'mensagem' : 'Criado com sucesso.'}), 200
     except Exception as a:
         return jsonify({'mensagem' : f'erro:{a}'}), 400
+    
+    finally:
+        cursor.close()
+        db.close()
     
 @server.route('/verifyexame', methods=['POST'])
 def listarExames():
@@ -131,6 +161,9 @@ def listarExames():
         if cliente_id is None:
             return jsonify({'Mensagem' : "É nescessario o id do cliente", 'exames' : None}), 400
         
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+
         cursor.execute("SELECT * FROM exames WHERE cliente_id = %s", (cliente_id,))
         lista = cursor.fetchall()
         
@@ -141,6 +174,10 @@ def listarExames():
         
     except Exception as a:
         return jsonify({'mensagem' : f"Erro: {a}", 'exames' : None}), 400
+    
+    finally:
+        cursor.close()
+        db.close()
         
 
 if __name__ == '__main__':
