@@ -1,17 +1,14 @@
+import recomendacao
 import processamento
 import adicionarUser
-import hashlib
 import addcliente
-import cv2
+import hashlib
 import numpy as np
-import base64
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import mysql.connector
 import os
 import json
-
-os.makedirs("uploads", exist_ok=True)
 
 def get_db():
     return mysql.connector.connect(
@@ -23,6 +20,16 @@ def get_db():
 
 server = Flask(__name__)
 CORS(server)
+
+@server.route('/recomendacao', methods=['POST'])
+def iaRecomendacao():
+    try:
+        dados = request.json
+        racoes = dados['racoes']
+        result = recomendacao.buscar(racoes)
+        return jsonify(result), result['codigo']
+    except Exception as e:
+        return jsonify({'Mensagem' : f'Erro: {e}', 'racoes' : ''}), 400
 
 @server.route('/imageProces', methods=['POST'])
 def processarImagem():
@@ -140,9 +147,10 @@ def adicionarExame():
         alimentos = json.dumps(dados["alimentos"])
         peso = dados["peso"]
         sexo = dados["sexo"]
+        racoes = dados["racoes"]
         db = get_db()
         cursor = db.cursor(dictionary=True)
-        cursor.execute("INSERT INTO exames (alimentos,peso,sexo,cliente_id) VALUES (%s,%s,%s,%s)",(alimentos,peso,sexo,clienteId))
+        cursor.execute("INSERT INTO exames (alimentos,peso,sexo,cliente_id,racoes) VALUES (%s,%s,%s,%s,%s)",(alimentos,peso,sexo,clienteId,racoes))
         db.commit()
         return jsonify({'mensagem' : 'Criado com sucesso.'}), 200
     except Exception as a:
