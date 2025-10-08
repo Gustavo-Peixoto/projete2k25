@@ -9,11 +9,11 @@ def procecar(imagem_base64):
     img_bytes = base64.b64decode(imagem_base64)
     np_arr = np.frombuffer(img_bytes,dtype=np.uint8)
 
-    # Converte para OpenCV
     img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
     model = YOLO("Gray_Blur.pt")
     # Processamento exemplo: escala de cinza
-    imagem = cv2.resize(img, (640, 640))
+    imagem = cv2.resize(img, (600, 600))
 
     # Remove tons de azul com HSV
     hsv = cv2.cvtColor(imagem, cv2.COLOR_BGR2HSV)
@@ -38,7 +38,7 @@ def procecar(imagem_base64):
 
     #Com IA
     img_rgb = cv2.cvtColor(blur, cv2.COLOR_BGR2RGB)
-    results = model(img_rgb, iou=0.45)
+    results = model(img_rgb)
 
  # valor bem alto para começar
     box_ref = None
@@ -58,18 +58,25 @@ def procecar(imagem_base64):
                 min_y1 = y1
                 tamanho = y2 - y1
                 box_ref = (x1, y1, x2, y2)
-        num = 1 
+
         for box, conf, cls in zip(boxes, confs, classes):
             x1, y1, x2, y2 = map(int, box)
             w = y2 - y1
             verificador = 0
+                # Se for o box de referência, pula
+            if (x1, y1, x2, y2) == box_ref:
+                cv2.rectangle(img_rgb, (x1, y1), (x2, y2), (255, 255, 0), 2)
+                cv2.putText(img_rgb, "Referencia", (x1, y1 - 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+                continue
+
             if(tamanho>w):
                 verificador = 1
                 # Desenha retângulo
                 cv2.rectangle(img_rgb, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
                 # Escreve  classe + confiança
-                label = f"{'Correto'} {conf:.2f} {num}"
+                label = f"{'Seguro'}"
                 cv2.putText(img_rgb, label, (x1, y1 - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
             else:
@@ -77,7 +84,7 @@ def procecar(imagem_base64):
                 cv2.rectangle(img_rgb, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
                 # Escreve classe + confiança
-                label = f"{'Incorreto'} {conf:.2f} {num}"
+                label = f"{'Alergico'}"
                 cv2.putText(img_rgb, label, (x1, y1 - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
             boxes_all.append({
@@ -87,17 +94,12 @@ def procecar(imagem_base64):
                 "y2": y2,
                 'veri':verificador
             })
-            num += 1
-    
-    if box_ref:
-        x1, y1, x2, y2 = box_ref
-        cv2.rectangle(img_rgb, (x1, y1), (x2, y2), (255, 255, 0), 2)
-        cv2.putText(img_rgb, "Referencia", (x1, y1 - 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
 
     _, buffer = cv2.imencode('.png', img_rgb)  # Converte para PNG
     img_bytes = buffer.tobytes()   
     img_return = base64.b64encode(img_bytes).decode('utf-8')
+
+
     return {
         'img' : img_return,
         'boxes' : boxes_all,

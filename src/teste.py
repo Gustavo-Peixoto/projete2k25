@@ -24,7 +24,6 @@ Sua tarefa é buscar e recomendar rações seguras para um cachorro com alergias
     - Marca
 - Ignore resultados de fóruns, blogs ou anúncios.
 - Se não houver opções seguras, diga claramente que não encontrou.
-- Caso o nome do alimento for sem nome, **ignore**.
 
 🐶 Alergias do cachorro:
 {alergias}
@@ -65,18 +64,9 @@ def buscar(alergias: dict):
     )
 
     conteudo = resposta["mensagem"]["content"]
+    return conteudo
 
-    try:
-        racoes = json.loads(conteudo)
-        return{
-            'codigo' : 200,
-            'mensagem' : 'Sucesso',
-            'racoes' : racoes
-        }
-    except Exception as e:
-        print(e)
-        return{
-            'codigo' : 400,
-            'mensagem' : f'Erro: {e}',
-            'racoes' : ''
-        }
+
+
+result = buscar({"cenoura" : "positivo", "beterraba" : "negativo"})
+print(result)
